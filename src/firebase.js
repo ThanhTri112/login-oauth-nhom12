@@ -4,11 +4,20 @@ import {
   GoogleAuthProvider, 
   GithubAuthProvider, 
   signInWithPopup, 
-  signOut as firebaseSignOut,
-  onAuthStateChanged 
+  signOut as firebaseSignOut
 } from 'firebase/auth';
 
-// Cấu hình Firebase mặc định lấy từ .env hoặc localStorage
+// Cấu hình Firebase chính thức của Nhóm 12
+export const defaultFirebaseConfig = {
+  apiKey: "AIzaSyDff1Cbx6EU63Hs-g-9KG5A-nLS8golsXc",
+  authDomain: "nhom12-oauth.firebaseapp.com",
+  projectId: "nhom12-oauth",
+  storageBucket: "nhom12-oauth.firebasestorage.app",
+  messagingSenderId: "1042088859186",
+  appId: "1:1042088859186:web:4e158f2ef4c020d72a4e2b",
+  measurementId: "G-JT10B16RR5"
+};
+
 const getSavedConfig = () => {
   try {
     const local = localStorage.getItem('nhom12_firebase_config');
@@ -18,20 +27,11 @@ const getSavedConfig = () => {
   } catch (e) {
     console.error('Lỗi đọc config từ localStorage:', e);
   }
-
-  return {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
-    appId: import.meta.env.VITE_FIREBASE_APP_ID || ""
-  };
+  return defaultFirebaseConfig;
 };
 
 export const currentFirebaseConfig = getSavedConfig();
 
-// Kiểm tra xem Firebase đã có API key hợp lệ chưa
 export const isFirebaseConfigured = () => {
   return Boolean(
     currentFirebaseConfig.apiKey && 
@@ -40,34 +40,23 @@ export const isFirebaseConfigured = () => {
   );
 };
 
-// Khởi tạo app an toàn
-let app;
-let auth;
-let googleProvider;
-let githubProvider;
+// Khởi tạo app Firebase
+const app = getApps().length > 0 ? getApp() : initializeApp(currentFirebaseConfig);
+const auth = getAuth(app);
 
-try {
-  if (isFirebaseConfigured()) {
-    app = getApps().length > 0 ? getApp() : initializeApp(currentFirebaseConfig);
-    auth = getAuth(app);
-    googleProvider = new GoogleAuthProvider();
-    googleProvider.setCustomParameters({ prompt: 'select_account' });
-    
-    githubProvider = new GithubAuthProvider();
-    githubProvider.addScope('read:user');
-    githubProvider.addScope('user:email');
-  }
-} catch (error) {
-  console.warn("Chưa khởi tạo Firebase SDK thật hoặc cấu hình chưa hợp lệ:", error);
-}
+// Provider Google
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+// Provider GitHub
+const githubProvider = new GithubAuthProvider();
+githubProvider.addScope('read:user');
+githubProvider.addScope('user:email');
 
 export { auth, googleProvider, githubProvider };
 
-// Hàm đăng nhập Google
+// Hàm đăng nhập Google thật
 export const signInWithGoogle = async () => {
-  if (!isFirebaseConfigured() || !auth) {
-    throw new Error("NO_CONFIG");
-  }
   const result = await signInWithPopup(auth, googleProvider);
   return {
     uid: result.user.uid,
@@ -75,15 +64,13 @@ export const signInWithGoogle = async () => {
     email: result.user.email,
     photoURL: result.user.photoURL,
     provider: "google",
-    providerLabel: "Google (Gmail)"
+    providerLabel: "Google (Gmail)",
+    isDemo: false
   };
 };
 
-// Hàm đăng nhập GitHub
+// Hàm đăng nhập GitHub thật
 export const signInWithGithub = async () => {
-  if (!isFirebaseConfigured() || !auth) {
-    throw new Error("NO_CONFIG");
-  }
   const result = await signInWithPopup(auth, githubProvider);
   return {
     uid: result.user.uid,
@@ -91,7 +78,8 @@ export const signInWithGithub = async () => {
     email: result.user.email || "Email riêng tư (GitHub)",
     photoURL: result.user.photoURL,
     provider: "github",
-    providerLabel: "GitHub"
+    providerLabel: "GitHub",
+    isDemo: false
   };
 };
 
